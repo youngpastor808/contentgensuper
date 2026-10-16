@@ -7,6 +7,7 @@ import * as dom from './dom';
 import { drawVideoFrame } from './videoRenderer';
 import { state } from './state';
 import { getActiveAspectRatio } from './handlers-effects';
+import { vsIcon } from './ui-icons';
 
 const WORKSPACE_FLAG_KEY = 'cg_flag_vs_workspace';
 
@@ -145,10 +146,10 @@ function makeEffectsLauncher(): HTMLElement {
   const card = document.createElement('div');
   card.className = 'vs-launch-card';
   card.innerHTML = `
-    <div class="vs-launch-icon">✦</div>
+    <div class="vs-launch-icon">${vsIcon('sparkles', 18)}</div>
     <h3>Visual Effects & Color</h3>
     <p>Open the existing effects workspace for grading, VFX and visual treatments.</p>
-    <button type="button" class="vs-btn primary" id="vs-open-effects-btn">Open FX Studio</button>
+    <button type="button" class="vs-btn primary" id="vs-open-effects-btn">${vsIcon('sliders', 13)} <span>Open FX Studio</span></button>
   `;
   card.querySelector('#vs-open-effects-btn')?.addEventListener('click', () => {
     document.getElementById('vfx-studio-video-director-btn')?.click();
@@ -166,7 +167,7 @@ export function initVsWorkspaceToggle(): void {
         toggle.type = 'button';
         toggle.id = 'cg-open-studio-ui-btn';
         toggle.className = 'vs-inline-toggle';
-        toggle.textContent = '✦ Studio UI';
+        toggle.innerHTML = `${vsIcon('sparkles', 13)} <span>Studio UI</span>`;
         toggle.title = 'Open the professional Video Director workspace';
         originalExport.parentElement.insertBefore(toggle, originalExport);
       }
@@ -224,14 +225,14 @@ export function activateVsWorkspace(): boolean {
     shellEl.innerHTML = `
       <header class="topbar">
         <div class="topbar-left">
-          <button type="button" id="vs-back-to-storyboard-btn" class="vs-btn subtle" title="Close the Video Director and return to the storyboard">← Storyboard</button>
-          <button type="button" id="vs-mobile-library-btn" class="vs-btn subtle vs-mobile-library-toggle" aria-controls="vs-left-assets-panel" aria-expanded="false" title="Open the Library panel">☷ Library</button>
+          <button type="button" id="vs-back-to-storyboard-btn" class="vs-btn subtle" title="Close the Video Director and return to the storyboard">${vsIcon('arrow-left', 13)} <span>Storyboard</span></button>
+          <button type="button" id="vs-mobile-library-btn" class="vs-btn subtle vs-mobile-library-toggle" aria-controls="vs-left-assets-panel" aria-expanded="false" title="Open the Library panel">${vsIcon('panel-left', 13)} <span>Library</span></button>
           <div class="vs-brand-lockup"><span class="vs-brand-mark">CG</span><div><strong>ContentGen Studio</strong><small>Video Editor</small></div></div>
         </div>
         <div class="topbar-center" id="vs-topbar-center-slot" aria-label="Preview and composition controls"></div>
         <div class="topbar-right" id="vs-topbar-right-slot">
-          <button type="button" id="vs-export-video-btn" class="vs-btn primary" title="Export the current video">↓ Export</button>
-          <button type="button" id="vs-close-director-btn" class="vs-icon-btn" title="Close Video Director" aria-label="Close Video Director">×</button>
+          <button type="button" id="vs-export-video-btn" class="vs-btn primary" title="Export the current video">${vsIcon('download', 13)} <span>Export</span></button>
+          <button type="button" id="vs-close-director-btn" class="vs-icon-btn" title="Close Video Director" aria-label="Close Video Director">${vsIcon('x', 15)}</button>
           <button type="button" id="vs-exit-classic-btn" class="vs-btn subtle" title="Switch back to the original ContentGen layout">Classic UI</button>
         </div>
       </header>
@@ -240,10 +241,10 @@ export function activateVsWorkspace(): boolean {
           <section class="panel assets-panel" id="vs-left-assets-panel" aria-label="Asset browser">
             <div class="panel-head assets-panel-head"><span class="panel-heading">Library</span><span class="panel-kicker">Browse & add</span></div>
             <div class="tablist asset-tabs" role="tablist" aria-label="Asset categories">
-              <button type="button" class="tab" role="tab" aria-selected="true" data-vs-left-tab="graphics">▧ Graphics</button>
-              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="audio">♫ Audio</button>
-              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="captions">T Captions</button>
-              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="effects">✦ Effects</button>
+              <button type="button" class="tab" role="tab" aria-selected="true" data-vs-left-tab="graphics">${vsIcon('layers', 13)} <span>Graphics</span></button>
+              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="audio">${vsIcon('music', 13)} <span>Audio</span></button>
+              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="captions">${vsIcon('captions', 13)} <span>Captions</span></button>
+              <button type="button" class="tab" role="tab" aria-selected="false" data-vs-left-tab="effects">${vsIcon('sparkles', 13)} <span>Effects</span></button>
             </div>
             <div class="assets-body" id="vs-left-tab-graphics"></div>
             <div class="assets-body hidden" id="vs-left-tab-audio"><div class="vs-section-intro"><strong>Audio & voice</strong><span>Existing narration and music controls</span></div></div>

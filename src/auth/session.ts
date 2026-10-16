@@ -30,13 +30,15 @@ export function setUserDocUnsubscribe(fn: (() => void) | null) {
 }
 
 export const OWNER_EMAILS = [
+    'youngpastor808@gmail.com',
     'bwaimatwaima@gmail.com'
 ];
 export const SUPER_ADMIN_EMAILS = [
+    'youngpastor808@gmail.com',
     'bwaimatwaima@gmail.com'
 ];
-export const SUPER_ADMIN_EMAIL = 'bwaimatwaima@gmail.com';
-export const ORIGINAL_OWNER_EMAIL = 'bwaimatwaima@gmail.com';
+export const SUPER_ADMIN_EMAIL = 'youngpastor808@gmail.com';
+export const ORIGINAL_OWNER_EMAIL = 'youngpastor808@gmail.com';
 
 export function isOwnerEmail(email: string | null | undefined): boolean {
     if (!email) return false;

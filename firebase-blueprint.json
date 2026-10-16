@@ -52,6 +52,15 @@
         "apiKey": {
           "type": "string"
         },
+        "approvedUsersCount": {
+          "type": "number"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdByAdmin": {
+          "type": "boolean"
+        },
         "createdAt": {
           "type": "string"
         },

@@ -16,6 +16,7 @@ import { DESIGN_ARCHETYPES } from './templates';
 import { assetStorage } from './assetStorage';
 import { updateAspectRatioState } from './ui-renderers';
 import { getScriptDerivedTitle, escapeHtml } from './utils';
+import { calculateBitrate } from './exporter/codecs';
 
 export { escapeHtml };
 
@@ -263,6 +264,25 @@ export function hideConfirmation() {
 
 let closeTimeout: number | null = null;
 
+let processingStartTimeMs = 0;
+let encodingPhaseStartMs = 0;
+let encodingStartPercent = 0;
+let smoothedEtaSec: number | null = null;
+
+function formatDurationShort(totalSeconds: number): string {
+  const sec = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+}
+
+function formatShortEta(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  const mins = Math.floor(s / 60);
+  const rem = s % 60;
+  return mins > 0 ? `${mins}m ${String(rem).padStart(2, '0')}s` : `${rem}s`;
+}
+
 export async function openProcessingModal(
     title: string, 
     cancellable = true, 
@@ -274,7 +294,6 @@ export async function openProcessingModal(
       closeTimeout = null;
   }
   
-  // Abort any previous pending processing controller
   if (state.currentProcessingAbortController) {
       try { 
           state.currentProcessingAbortController.abort(); 
@@ -287,6 +306,12 @@ export async function openProcessingModal(
   state.currentProcessingAbortController = controller;
   state.cancelProcessingCallback = onCancel || null;
 
+  // Reset live ETA trackers
+  processingStartTimeMs = performance.now();
+  encodingPhaseStartMs = 0;
+  encodingStartPercent = 0;
+  smoothedEtaSec = null;
+
   if (dom.progressTitle) dom.progressTitle.textContent = title;
   if (dom.progressBarIndicator) dom.progressBarIndicator.style.width = '1%';
   if (dom.progressText) dom.progressText.textContent = 'Initializing...';
@@ -297,10 +322,6 @@ export async function openProcessingModal(
   if (dom.progressIndicator) {
       dom.progressIndicator.classList.remove('hidden');
       
-      // Wait two animation frames so the browser paints the element before
-      // adding 'visible' — this ensures the slide-up transition is always
-      // visible even when export completes very quickly.
-      // We add a setTimeout fallback in case the tab is in the background.
       await new Promise<void>(resolve => {
           let fired = false;
           const done = () => {
@@ -318,7 +339,6 @@ export async function openProcessingModal(
           dom.progressIndicator.classList.add('translate-y-0');
       }
       
-      // Brief additional wait to let the CSS transition start rendering
       await new Promise(resolve => setTimeout(resolve, 50));
   }
   return controller.signal;
@@ -364,11 +384,43 @@ export function updateProcessingProgress(percent: number, message: string) {
   const safePercent = Math.max(1, Math.min(100, Math.round(percent)));
   if (dom.progressBarIndicator) dom.progressBarIndicator.style.width = `${safePercent}%`;
   if (dom.progressPercent) dom.progressPercent.textContent = `${safePercent}%`;
-  if (message && dom.progressText) dom.progressText.textContent = message;
-  
+
+  if (message && dom.progressText) {
+    let displayMessage = message;
+    const now = performance.now();
+
+    // Compute live Elapsed & Remaining ETA during active encoding (>10% and <96%)
+    if (processingStartTimeMs > 0 && percent > 10 && percent < 96) {
+      if (encodingPhaseStartMs === 0 || percent < encodingStartPercent) {
+        encodingPhaseStartMs = now;
+        encodingStartPercent = percent;
+        smoothedEtaSec = null;
+      } else {
+        const elapsedEncodingSec = (now - encodingPhaseStartMs) / 1000;
+        const pctDelta = percent - encodingStartPercent;
+
+        if (elapsedEncodingSec > 1.0 && pctDelta > 1.0) {
+          const ratePerSec = pctDelta / elapsedEncodingSec;
+          const remainingPct = Math.max(0, 97 - percent);
+          const rawEtaSec = remainingPct / ratePerSec;
+
+          smoothedEtaSec =
+            smoothedEtaSec === null
+              ? rawEtaSec
+              : smoothedEtaSec * 0.78 + rawEtaSec * 0.22;
+
+          const totalElapsedSec = (now - processingStartTimeMs) / 1000;
+          displayMessage = `${message}  •  Elapsed ${formatShortEta(totalElapsedSec)}  •  ETA ~${formatShortEta(smoothedEtaSec)}`;
+        }
+      }
+    }
+
+    dom.progressText.textContent = displayMessage;
+  }
+
   if (message && message !== lastLogMessage) {
-      logProductionStatus(message);
-      lastLogMessage = message;
+    logProductionStatus(message);
+    lastLogMessage = message;
   }
 }
 
@@ -398,6 +450,10 @@ export function logProductionStatus(msg: string, isError = false) {
 }
 
 export function closeProcessingModal() {
+  processingStartTimeMs = 0;
+  encodingPhaseStartMs = 0;
+  encodingStartPercent = 0;
+  smoothedEtaSec = null;
   state.cancelProcessingCallback = null;
   state.currentProcessingAbortController = null;
   if (dom.progressIndicator) {
@@ -836,9 +892,52 @@ export function updateExportSummaryCard() {
     dom.exportSummaryQualityBadge.className = `font-medium ${qInfo.class}`;
   }
 
+  const durationSec = videoRenderContext?.totalDuration || (timelineState && typeof (timelineState as any).getTotalDuration === 'function' ? (timelineState as any).getTotalDuration() : 0);
+
   if (dom.exportSummaryDuration) {
-    const duration = videoRenderContext?.totalDuration || 0;
-    dom.exportSummaryDuration.textContent = formatTime(duration);
+    dom.exportSummaryDuration.textContent = formatTime(durationSec);
+  }
+
+  // Calculate Pre-Export Estimated File Size & Render Time (ETA)
+  const totalDurSec = Math.max(0, videoRenderContext?.totalDuration || 0);
+  const resMeta = EXPORT_RESOLUTION_MAP[resVal] || { width: 1920, height: 1080 };
+  const numericFps = parseInt(fpsVal, 10) || 30;
+  const bpp = qualityVal === 'low' ? 0.045 : qualityVal === 'high' ? 0.12 : 0.075;
+  let estVideoBitrate = resMeta.width * resMeta.height * numericFps * bpp;
+  if (formatVal === 'webm') estVideoBitrate *= 0.7;
+  estVideoBitrate = Math.max(1_000_000, Math.min(40_000_000, Math.floor(estVideoBitrate)));
+
+  const estFileSizeEl = document.getElementById('export-summary-filesize');
+  if (estFileSizeEl) {
+    if (formatVal === 'xml') {
+      estFileSizeEl.textContent = '< 1 MB';
+    } else if (totalDurSec <= 0) {
+      estFileSizeEl.textContent = '~0 MB';
+    } else {
+      const totalBits = (estVideoBitrate + 192_000) * totalDurSec;
+      const megabytes = totalBits / 8 / (1024 * 1024);
+      estFileSizeEl.textContent = megabytes >= 100
+        ? `~${Math.round(megabytes)} MB`
+        : `~${megabytes.toFixed(1)} MB`;
+    }
+  }
+
+  const estEtaEl = document.getElementById('export-summary-eta');
+  if (estEtaEl) {
+    if (formatVal === 'xml' || totalDurSec <= 0) {
+      estEtaEl.textContent = 'Instant';
+    } else {
+      const isCloudSelected = (document.getElementById('export-engine-cloud') as HTMLInputElement | null)?.checked;
+      const totalFrames = totalDurSec * numericFps;
+      const pixelScale = (resMeta.width * resMeta.height) / (1920 * 1080);
+      const estFpsThroughput = isCloudSelected
+        ? Math.max(15, 42 / Math.sqrt(pixelScale))
+        : Math.max(6, 26 / Math.pow(pixelScale, 0.75));
+      const estRenderSec = Math.max(3, Math.round(totalFrames / estFpsThroughput + 4));
+      const em = Math.floor(estRenderSec / 60);
+      const es = estRenderSec % 60;
+      estEtaEl.textContent = em > 0 ? `~${em}m ${String(es).padStart(2, '0')}s` : `~${es}s`;
+    }
   }
 
   // Update Cloud Render Quota and Estimate
@@ -850,7 +949,6 @@ export function updateExportSummaryCard() {
     dom.cloudRenderQuotaText.textContent = `${Math.round(remainingMinutes)} mins remaining`;
   }
 
-  const durationSec = videoRenderContext?.totalDuration || 0;
   const baseMinutes = Math.max(1, Math.ceil(durationSec / 60));
   const provider = (state.cloudRenderProvider || (dom.cloudRenderProviderSelect?.value as any) || 'gcp') as 'gcp' | 'aws' | 'headless';
   const multiplier = provider === 'headless' ? 2 : 1;

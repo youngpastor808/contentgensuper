@@ -1068,13 +1068,41 @@ export async function resyncTimelineVisualsFromStoryboard(): Promise<boolean> {
 
     if (!shot) continue;
 
-    const shotVideoURL = shot._videoObjectURL;
-    const shotImageURL = shot._imageObjectURL;
+    let shotVideoURL = shot._videoObjectURL;
+    let shotImageURL = shot._imageObjectURL;
+
+    if (!shotImageURL && shot.image_id) {
+      try {
+        const { assetStorage } = await import('./assetStorage');
+        const blob = await assetStorage.getAsset(shot.image_id);
+        if (blob) {
+          shotImageURL = URL.createObjectURL(blob);
+          shot._imageObjectURL = shotImageURL;
+        }
+      } catch (e) {
+        console.warn(`[Timeline Resync] Failed to load image asset for shot ${shot.id}:`, e);
+      }
+    }
+    if (!shotVideoURL && shot.video_id) {
+      try {
+        const { assetStorage } = await import('./assetStorage');
+        const vBlob = await assetStorage.getAsset(shot.video_id);
+        if (vBlob) {
+          shotVideoURL = URL.createObjectURL(vBlob);
+          shot._videoObjectURL = shotVideoURL;
+        }
+      } catch (e) {
+        console.warn(`[Timeline Resync] Failed to load video asset for shot ${shot.id}:`, e);
+      }
+    }
+
     const clipVideoURL = clip._videoObjectURL;
     const clipImageURL = clip._imageObjectURL;
 
     const needsVideoReload = (shotVideoURL && shotVideoURL !== clipVideoURL) || (shotVideoURL && !clip.videoElement);
-    const needsImageReload = (!shotVideoURL && shotImageURL && shotImageURL !== clipImageURL) || (!shotVideoURL && shotImageURL && !clip.image);
+    const needsImageReload = (!shotVideoURL && shotImageURL && shotImageURL !== clipImageURL) || 
+                             (!shotVideoURL && shotImageURL && (!clip.image || !clip.image.src || clip.image.src.includes('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7') || (clip.image as any).naturalWidth === 0)) ||
+                             (!clip.image && !!shotImageURL);
 
     const shotTHMode = shot.talkingHeadMode || (state.uploadedVideoElement ? 'pip-br' : 'none');
     const shotTHShape = shot.talkingHeadShape || 'circle';
@@ -1134,11 +1162,25 @@ export async function resyncTimelineVisualsFromStoryboard(): Promise<boolean> {
         }
       }
       if (shotImageURL) {
-        if (needsImageReload || !img) {
+        if (needsImageReload || !img || !img.src) {
           try {
             img = await utils.loadImageOrThrow(shotImageURL);
           } catch (e) {
             console.warn(`Failed to reload image for clip ${clip.id}`, e);
+            if (shot.image_id) {
+              try {
+                const { assetStorage } = await import('./assetStorage');
+                const freshBlob = await assetStorage.getAsset(shot.image_id);
+                if (freshBlob) {
+                  const freshUrl = URL.createObjectURL(freshBlob);
+                  shot._imageObjectURL = freshUrl;
+                  shotImageURL = freshUrl;
+                  img = await utils.loadImageOrThrow(freshUrl);
+                }
+              } catch (reHydrateErr) {
+                console.warn("Re-hydration from assetStorage failed:", reHydrateErr);
+              }
+            }
           }
         }
         if (!hasDualMedia && !shotVideoURL) {
@@ -1260,7 +1302,10 @@ export async function handleOpenVideoDirector() {
       ui.showStatus('Timeline built from storyboard.', false, 3000);
   }
 
-  if (timelineState.clips?.length > 0 && timelineState.videoGenerated) {
+  if (timelineState.clips?.length > 0) {
+      if (!timelineState.videoGenerated) {
+          timelineState.setVideoGenerated(true);
+      }
       if (dom.videoPreGenerationOverlay) dom.videoPreGenerationOverlay.classList.add('hidden');
       if (dom.videoControlsContainer) dom.videoControlsContainer.classList.remove('hidden');
       if (dom.videoPostGenerationOverlay) dom.videoPostGenerationOverlay.classList.remove('hidden');
@@ -1268,6 +1313,7 @@ export async function handleOpenVideoDirector() {
           dom.videoCanvas.classList.remove('hidden');
           dom.videoCanvas.style.display = 'block';
       }
+      updateVideoContext();
       drawVideoFrame(state.videoPauseTime || 0);
   }
   if (dom.videoExportBtn && (timelineState.clips?.length > 0 || state.uploadedVideoElement || timelineState.masterAudioBuffer || state.uploadedAudioBuffer)) {

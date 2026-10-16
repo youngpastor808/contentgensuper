@@ -5,7 +5,7 @@
 // This file contains shared TypeScript types and interfaces used across the application.
 
 export type AspectRatio = "16:9" | "9:16" | "4:3" | "3:4" | "1:1";
-export type PreviewResolution = "240p" | "320p" | "520p" | "720p";
+export type PreviewResolution = "240p" | "320p" | "520p" | "720p" | "1080p" | "4k";
 
 interface UserRecord {
     uid?: string;

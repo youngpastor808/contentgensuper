@@ -724,7 +724,7 @@ export async function checkAndCreateUser(user: User) {
             const finalRole = isOwner ? 'owner' : (preExistingData?.role || (isAdmin ? 'admin' : 'user'));
             const finalStatus = isOwner ? 'approved' : (preExistingData?.status ? preExistingData.status : (isAutoApproved ? 'approved' : 'pending'));
             const finalCredits = isOwner ? 1000000 : (typeof preExistingData?.credits === 'number' ? preExistingData.credits : defaultInitialCredits);
-            let finalDisplayName = user.displayName || preExistingData?.displayName || (isOwner ? 'Bwaima Twaima' : defaultName);
+            let finalDisplayName = user.displayName || preExistingData?.displayName || (user.email ? user.email.split('@')[0] : defaultName);
             if (isUrlOrLink(finalDisplayName)) {
                 finalDisplayName = cleanUserEmail ? cleanUserEmail.split('@')[0] : 'User';
             }

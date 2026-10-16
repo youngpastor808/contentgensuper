@@ -199,7 +199,7 @@ export const state = {
         set desktopStudioPasswordHash(value: string) { if (typeof localStorage !== 'undefined') localStorage.setItem('cg_desktop_studio_password_hash', value); },
         requireAdminApproval: true,
         enforceGuestRestrictions: true,
-        guestExportPolicy: 'watermark_320p' as 'watermark_320p' | 'block_all' | 'unrestricted',
+        guestExportPolicy: 'unrestricted' as 'watermark_320p' | 'block_all' | 'unrestricted',
         creditCosts: {
             IMAGE_GENERATION_GEMINI: 50,
             IMAGE_GENERATION_IMAGEN: 300,

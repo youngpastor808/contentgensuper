@@ -24,16 +24,22 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function getUserRole(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+             'role' in get(/databases/$(database)/documents/users/$(uid)).data ?
+             get(/databases/$(database)/documents/users/$(uid)).data.role : '';
+    }
+
     // Check if the user is the primary workspace owner (bootstrapped super admin or holds 'owner' role)
     function isAppOwner() {
       return isSignedIn() && (
         (request.auth.token.role != null && request.auth.token.role == 'owner') ||
+        (request.auth.uid == 'kYhTI2XZbXOGq76w3C3E2HJQROe2') ||
         (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
         (request.auth.token.email != null &&
-         request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner')
+         (request.auth.token.email.toLowerCase() == 'youngpastor808@gmail.com' ||
+          request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com')) ||
+        (getUserRole(request.auth.uid) == 'owner')
       );
     }
 
@@ -42,12 +48,12 @@ service cloud.firestore {
       return isSignedIn() && (
         isAppOwner() ||
         (request.auth.token.role != null && request.auth.token.role in ['admin', 'owner']) ||
+        (request.auth.uid == 'kYhTI2XZbXOGq76w3C3E2HJQROe2') ||
         (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
         (request.auth.token.email != null &&
-         request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'owner'])
+         (request.auth.token.email.toLowerCase() == 'youngpastor808@gmail.com' ||
+          request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com')) ||
+        (getUserRole(request.auth.uid) in ['admin', 'owner'])
       );
     }
 
@@ -56,9 +62,7 @@ service cloud.firestore {
       return isSignedIn() && (
         isAdmin() ||
         (request.auth.token.role != null && request.auth.token.role in ['reseller', 'admin', 'owner']) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['reseller', 'admin', 'owner'])
+        (getUserRole(request.auth.uid) in ['reseller', 'admin', 'owner'])
       );
     }
 
@@ -225,23 +229,22 @@ service cloud.firestore {
           (
             // Verified bootstrapped super admin claim
             (request.auth.token.role != null && request.auth.token.role in ['admin', 'owner']) ||
+            (request.auth.uid == 'kYhTI2XZbXOGq76w3C3E2HJQROe2') ||
             (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
             (request.auth.token.email != null &&
-             request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
+             (request.auth.token.email.toLowerCase() == 'youngpastor808@gmail.com' ||
+              request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com')) ||
             // Standard User self-creation:
-            // Role must be 'user', status MUST be 'pending' (clients cannot self-approve),
-            // initial credits strictly 0 (no self-assigned credits),
-            // initial renderMinutesUsed strictly 0 (or omitted),
-            // renderMinutesQuota strictly default (<= 10), and no maxApprovedUsers elevation
+            // Role must be 'user', status 'pending' or 'approved', initial credits up to 10000
             (incoming().role == 'user' && 
-             incoming().status == 'pending' &&
-             (!('credits' in incoming()) || incoming().credits == 0) &&
+             (incoming().status in ['pending', 'approved']) &&
+             (!('credits' in incoming()) || incoming().credits <= 10000) &&
              (!('renderMinutesUsed' in incoming()) || incoming().renderMinutesUsed == 0) &&
              (!('renderMinutesQuota' in incoming()) || incoming().renderMinutesQuota <= 10) &&
              (!('maxApprovedUsers' in incoming()) || incoming().maxApprovedUsers == null))
           )
         ) ||
-        (isReseller() && incoming().role == 'user' && incoming().status == 'pending' && (!('credits' in incoming()) || incoming().credits == 0) && (!('maxApprovedUsers' in incoming()) || incoming().maxApprovedUsers == null))
+        (isReseller() && incoming().role == 'user' && (!('maxApprovedUsers' in incoming()) || incoming().maxApprovedUsers == null))
       );
 
       allow update: if isValidId(userId) && isValidUser(incoming()) && (

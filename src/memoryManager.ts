@@ -7,6 +7,8 @@ import { timelineState } from './state-timeline';
 import { dropDepth } from './parallax/depth';
 import { acquireUrl, releaseUrl } from './mediaUrlRegistry';
 
+const BLANK_PIXEL_DATA_URL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 export function optimizeMemoryForVideoDirector() {
     console.log('[Memory Manager] Freeing Storyboard VRAM for Video Director...');
 
@@ -15,79 +17,45 @@ export function optimizeMemoryForVideoDirector() {
     if (storyboardContainer) {
         const mediaElements = storyboardContainer.querySelectorAll('img, video');
         mediaElements.forEach((el) => {
+            if (el.closest('#video-director-modal') || el.closest('#vs-director-shell')) {
+                return;
+            }
             if (el instanceof HTMLImageElement) {
-                if (el.src && !el.dataset.restoresrc) {
-                    el.dataset.restoresrc = el.src;
+                if (el.src && !el.src.includes('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')) {
+                    if (!el.dataset.restoresrc) {
+                        el.dataset.restoresrc = el.src;
+                    }
+                    el.src = BLANK_PIXEL_DATA_URL; // Drops the decoded bitmap texture from VRAM
                 }
-                el.src = ''; // Drops the decoded bitmap from VRAM
             } else if (el instanceof HTMLVideoElement) {
-                if (el.src && !el.dataset.restoresrc) {
-                    el.dataset.restoresrc = el.src;
+                const vSrc = el.currentSrc || el.src;
+                if (vSrc && !el.dataset.restoresrc) {
+                    el.dataset.restoresrc = vSrc;
                 }
                 el.pause();
                 el.removeAttribute('src');
-                el.load(); // Forces the browser video decoder to release memory
+                el.load(); // Forces the browser video decoder to release hardware VRAM
             }
         });
     }
 
-    // 2. Map exactly what the Video Director is currently using
-    const activeUrls = new Set<string>();
-    if (timelineState.clips) {
-        for (const clip of timelineState.clips) {
-            if (clip._imageObjectURL) activeUrls.add(clip._imageObjectURL);
-            if (clip._secondaryImageObjectURL) activeUrls.add(clip._secondaryImageObjectURL);
-            if (clip._videoObjectURL) activeUrls.add(clip._videoObjectURL);
-            if (clip._secondaryVideoObjectURL) activeUrls.add(clip._secondaryVideoObjectURL);
-            if (clip.image && typeof (clip.image as any).src === 'string') {
-                activeUrls.add((clip.image as any).src);
-            }
-        }
-    }
+    // 2. Disconnect Storyboard IntersectionObserver so it does not re-hydrate Storyboard in background
+    try {
+        import('./ui-renderers').then(({ resetShotImageObserver }) => {
+            resetShotImageObserver();
+        }).catch(() => {});
+    } catch {}
 
-    // 3. Purge orphaned Blob URLs and heavy Depth Maps from the Storyboard state
-    // CRITICAL SAFETY: Only revoke Blob URLs if the shot has a persistent asset ID in assetStorage.
-    // Otherwise, revoking the URL permanently destroys user media, causing net::ERR_FILE_NOT_FOUND.
+    // 3. Drop heavy procedural 3D parallax depth arrays from shots to reclaim RAM
+    // Note: Never revoke or clear shot._imageObjectURL or shot._videoObjectURL here,
+    // as Video Director depends directly on these media references to render canvas and timeline.
     if (state.currentScenes) {
         state.currentScenes.forEach((scene: any) => {
             const shots = scene.lines || [scene];
             shots.forEach((shot: any) => {
-                
-                // Clear Primary Image & Depth Map
-                if (shot._imageObjectURL && !activeUrls.has(shot._imageObjectURL)) {
-                    dropDepth(shot._imageObjectURL); // Drops the ~1MB+ procedural depth array
-                    if (shot.image) dropDepth(shot.image);
-                    if (shot.image_id) {
-                        releaseUrl(shot._imageObjectURL, shot.id || shot.image_id);
-                        shot._imageObjectURL = undefined; 
-                        shot.image = undefined; 
-                    }
-                }
-
-                // Clear Primary Video
-                if (shot._videoObjectURL && !activeUrls.has(shot._videoObjectURL)) {
-                    if (shot.video_id) {
-                        releaseUrl(shot._videoObjectURL, shot.id || shot.video_id);
-                        shot._videoObjectURL = undefined;
-                    }
-                }
-
-                // Clear Secondary Image
-                if (shot._secondaryImageObjectURL && !activeUrls.has(shot._secondaryImageObjectURL)) {
-                    dropDepth(shot._secondaryImageObjectURL);
-                    if (shot.secondary_image_id) {
-                        releaseUrl(shot._secondaryImageObjectURL, shot.id || shot.secondary_image_id);
-                        shot._secondaryImageObjectURL = undefined;
-                    }
-                }
-
-                // Clear Secondary Video
-                if (shot._secondaryVideoObjectURL && !activeUrls.has(shot._secondaryVideoObjectURL)) {
-                    if (shot.secondary_video_id) {
-                        releaseUrl(shot._secondaryVideoObjectURL, shot.id || shot.secondary_video_id);
-                        shot._secondaryVideoObjectURL = undefined;
-                    }
-                }
+                if (shot._imageObjectURL) dropDepth(shot._imageObjectURL);
+                if (shot.image) dropDepth(shot.image);
+                if (shot._secondaryImageObjectURL) dropDepth(shot._secondaryImageObjectURL);
             });
         });
     }
@@ -111,7 +79,7 @@ export async function restoreStoryboardFromVideoDirector() {
         if (shot.id) shotMap.set(shot.id, shot);
     });
 
-    // 2. Re-create Object URLs for any shot whose URL was purged during Director mode
+    // 2. Re-create Object URLs for any shot whose URL was missing or revoked
     const { assetStorage } = await import('./assetStorage');
     for (const shot of allShots) {
         if (shot.image_id && !shot._imageObjectURL) {
@@ -157,14 +125,17 @@ export async function restoreStoryboardFromVideoDirector() {
     }
 
     // 3. Restore Image elements in the Storyboard DOM
-    const images = storyboardContainer.querySelectorAll('img.generated-img, img[data-id]');
+    const images = storyboardContainer.querySelectorAll('img.generated-img, img[data-id], .img-container img');
     images.forEach((img) => {
         const imgEl = img as HTMLImageElement;
         const id = imgEl.dataset.id || (imgEl.closest('[data-id]') as HTMLElement)?.dataset.id;
         const shot = id ? shotMap.get(id) : null;
         
-        const targetSrc = shot?._imageObjectURL || imgEl.dataset.restoresrc;
-        if (targetSrc) {
+        let targetSrc = shot?._imageObjectURL || imgEl.dataset.restoresrc;
+        if (shot?._imageObjectURL) {
+            targetSrc = shot._imageObjectURL;
+        }
+        if (targetSrc && !targetSrc.includes('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')) {
             if (imgEl.src !== targetSrc) {
                 imgEl.src = targetSrc;
             }
@@ -173,13 +144,16 @@ export async function restoreStoryboardFromVideoDirector() {
     });
 
     // 4. Restore Video elements in the Storyboard DOM
-    const videos = storyboardContainer.querySelectorAll('video.generated-video, video[data-id]');
+    const videos = storyboardContainer.querySelectorAll('video.generated-video, video[data-id], .img-container video');
     videos.forEach((vid) => {
         const vidEl = vid as HTMLVideoElement;
         const id = vidEl.dataset.id || (vidEl.closest('[data-id]') as HTMLElement)?.dataset.id;
         const shot = id ? shotMap.get(id) : null;
         
-        const targetSrc = shot?._videoObjectURL || vidEl.dataset.restoresrc;
+        let targetSrc = shot?._videoObjectURL || vidEl.dataset.restoresrc;
+        if (shot?._videoObjectURL) {
+            targetSrc = shot._videoObjectURL;
+        }
         if (targetSrc) {
             if (vidEl.src !== targetSrc) {
                 vidEl.src = targetSrc;

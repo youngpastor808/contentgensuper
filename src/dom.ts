@@ -1081,6 +1081,8 @@ export let exportSummaryFormatBadge: HTMLElement;
 export let exportSummaryFpsBadge: HTMLElement;
 export let exportSummaryQualityBadge: HTMLElement;
 export let exportSummaryDuration: HTMLElement;
+export let exportSummaryFilesize: HTMLElement;
+export let exportSummaryEta: HTMLElement;
 export let cloudRenderQuotaBadge: HTMLElement;
 export let cloudRenderQuotaText: HTMLElement;
 export let exportEngineLocalRadio: HTMLInputElement;
@@ -2179,6 +2181,8 @@ export function initDOM() {
     exportSummaryFpsBadge = document.getElementById('export-summary-fps-badge') as HTMLElement;
     exportSummaryQualityBadge = document.getElementById('export-summary-quality-badge') as HTMLElement;
     exportSummaryDuration = document.getElementById('export-summary-duration') as HTMLElement;
+    exportSummaryFilesize = document.getElementById('export-summary-filesize') as HTMLElement;
+    exportSummaryEta = document.getElementById('export-summary-eta') as HTMLElement;
     cloudRenderQuotaBadge = document.getElementById('cloud-render-quota-badge') as HTMLElement;
     cloudRenderQuotaText = document.getElementById('cloud-render-quota-text') as HTMLElement;
     exportEngineLocalRadio = document.getElementById('export-engine-local') as HTMLInputElement;

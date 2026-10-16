@@ -147,10 +147,30 @@ export function getMatchingResolutionKey(aspectRatio: AspectRatio = '16:9', curr
         }
 
         // Quality preserving mapping across aspect ratios
-        if (currentKey === '4k' && aspectRatio === '9:16') return '9x16-4k';
-        if (currentKey === '720p' && aspectRatio === '9:16') return '9x16-sd';
-        if (currentKey === '9x16-4k' && aspectRatio === '16:9') return '4k';
-        if (currentKey === '9x16-sd' && aspectRatio === '16:9') return '720p';
+        const is4k = currentKey === '4k' || currentKey.includes('4k');
+        if (is4k) {
+            if (aspectRatio === '16:9') return '4k';
+            if (aspectRatio === '9:16') return '9x16-4k';
+            if (aspectRatio === '1:1') return '1x1-4k';
+            if (aspectRatio === '4:3') return '4x3-4k';
+            if (aspectRatio === '3:4') return '3x4-4k';
+        }
+
+        const isSd = currentKey === '720p' || currentKey.includes('sd');
+        if (isSd) {
+            if (aspectRatio === '16:9') return '720p';
+            if (aspectRatio === '9:16') return '9x16-sd';
+            if (aspectRatio === '1:1') return '1x1-sd';
+            if (aspectRatio === '4:3') return '4x3-sd';
+            if (aspectRatio === '3:4') return '3x4-sd';
+        }
+
+        // Default to standard HD / 1080p across aspect ratios
+        if (aspectRatio === '16:9') return '1080p';
+        if (aspectRatio === '9:16') return '9x16-hd';
+        if (aspectRatio === '1:1') return '1x1-hd';
+        if (aspectRatio === '4:3') return '4x3-hd';
+        if (aspectRatio === '3:4') return '3x4-hd';
     }
     return getDefaultResolutionKeyForAspectRatio(aspectRatio);
 }
@@ -165,22 +185,25 @@ export const EXPORT_RESOLUTION_MAP: { [key: string]: { width: number; height: nu
     
     // 9:16 Vertical (Shorts / Reels / TikTok)
     '9x16-hd': { width: 1080, height: 1920, aspectRatio: '9:16', label: '1080p Vertical (1080×1920)' },
-    '9x16-4k': { width: 1440, height: 2560, aspectRatio: '9:16', label: '1440p Vertical (1440×2560)' },
+    '9x16-4k': { width: 2160, height: 3840, aspectRatio: '9:16', label: '4K Vertical (2160×3840)' },
     '9x16-sd': { width: 720, height: 1280, aspectRatio: '9:16', label: '720p Vertical (720×1280)' },
     '9x16-320p': { width: 320, height: 568, aspectRatio: '9:16', label: '320p Vertical (320×568) - Watermarked' },
     
     // 1:1 Square
+    '1x1-4k': { width: 2160, height: 2160, aspectRatio: '1:1', label: '4K Square (2160×2160)' },
     '1x1-hd': { width: 1080, height: 1080, aspectRatio: '1:1', label: '1080p Square (1080×1080)' },
     '1x1-sd': { width: 720, height: 720, aspectRatio: '1:1', label: '720p Square (720×720)' },
     '1x1-320p': { width: 320, height: 320, aspectRatio: '1:1', label: '320p Square (320×320) - Watermarked' },
 
     // 4:3 Standard
-    '4x3-hd': { width: 1440, height: 1080, aspectRatio: '4:3', label: '1440×1080 Standard (4:3)' },
+    '4x3-4k': { width: 2880, height: 2160, aspectRatio: '4:3', label: '4K Classic (2880×2160)' },
+    '4x3-hd': { width: 1440, height: 1080, aspectRatio: '4:3', label: '1080p Classic (1440×1080)' },
     '4x3-sd': { width: 1024, height: 768, aspectRatio: '4:3', label: '1024×768 Standard (4:3)' },
     '4x3-320p': { width: 426, height: 320, aspectRatio: '4:3', label: '320p Classic (426×320) - Watermarked' },
 
     // 3:4 Portrait
-    '3x4-hd': { width: 1080, height: 1440, aspectRatio: '3:4', label: '1080×1440 Portrait (3:4)' },
+    '3x4-4k': { width: 2160, height: 2880, aspectRatio: '3:4', label: '4K Portrait (2160×2880)' },
+    '3x4-hd': { width: 1080, height: 1440, aspectRatio: '3:4', label: '1080p Portrait (1080×1440)' },
     '3x4-sd': { width: 768, height: 1024, aspectRatio: '3:4', label: '768×1024 Portrait (3:4)' },
     '3x4-320p': { width: 320, height: 426, aspectRatio: '3:4', label: '320p Portrait (320×426) - Watermarked' },
 };

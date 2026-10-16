@@ -705,6 +705,25 @@ export async function buildTimelineFromShotsWithMediaDurations(): Promise<void> 
         let duration = typeof shot.duration_seconds === 'number' ? shot.duration_seconds : 4; // images/empty default
         let videoEl: HTMLVideoElement | null = null;
 
+        if (!shot._imageObjectURL && shot.image_id) {
+            try {
+                const { assetStorage } = await import('./assetStorage');
+                const blob = await assetStorage.getAsset(shot.image_id);
+                if (blob) {
+                    shot._imageObjectURL = URL.createObjectURL(blob);
+                }
+            } catch {}
+        }
+        if (!shot._videoObjectURL && shot.video_id) {
+            try {
+                const { assetStorage } = await import('./assetStorage');
+                const vBlob = await assetStorage.getAsset(shot.video_id);
+                if (vBlob) {
+                    shot._videoObjectURL = URL.createObjectURL(vBlob);
+                }
+            } catch {}
+        }
+
         if (shot._videoObjectURL) {
             try { videoEl = await utils.loadVideoElement(shot._videoObjectURL); } catch {}
             if (videoEl && Number.isFinite(videoEl.duration) && videoEl.duration > 0.1) {
@@ -715,7 +734,20 @@ export async function buildTimelineFromShotsWithMediaDurations(): Promise<void> 
 
         let image: HTMLImageElement | undefined;
         if (shot._imageObjectURL) {
-            try { image = await utils.loadImageOrThrow(shot._imageObjectURL); } catch {}
+            try { 
+                image = await utils.loadImageOrThrow(shot._imageObjectURL); 
+            } catch {
+                if (shot.image_id) {
+                    try {
+                        const { assetStorage } = await import('./assetStorage');
+                        const blob = await assetStorage.getAsset(shot.image_id);
+                        if (blob) {
+                            shot._imageObjectURL = URL.createObjectURL(blob);
+                            image = await utils.loadImageOrThrow(shot._imageObjectURL);
+                        }
+                    } catch {}
+                }
+            }
         }
 
         clips.push({

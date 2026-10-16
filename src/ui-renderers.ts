@@ -542,6 +542,9 @@ function findShotById(id: string): any {
  * Hydrates visible shot images via IntersectionObserver to prevent OOM on 100+ shots.
  */
 export function hydrateVisibleShots() {
+  if (dom.videoDirectorModal && !dom.videoDirectorModal.classList.contains("hidden")) {
+    return;
+  }
   const images = document.querySelectorAll(".generated-img[data-id]");
   const observer = getShotImageObserver();
 

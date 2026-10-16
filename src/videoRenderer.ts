@@ -1836,6 +1836,18 @@ export function getPreviewDimensions(aspectRatio: string = '16:9', resQuality?: 
     else if (aspectRatio === '4:3') { targetW = 694; targetH = 520; }
     else if (aspectRatio === '3:4') { targetW = 520; targetH = 694; }
     else { targetW = 924; targetH = 520; }
+  } else if (quality === '4k') {
+    if (aspectRatio === '9:16') { targetW = 2160; targetH = 3840; }
+    else if (aspectRatio === '1:1') { targetW = 2160; targetH = 2160; }
+    else if (aspectRatio === '4:3') { targetW = 2880; targetH = 2160; }
+    else if (aspectRatio === '3:4') { targetW = 2160; targetH = 2880; }
+    else { targetW = 3840; targetH = 2160; }
+  } else if (quality === '1080p') {
+    if (aspectRatio === '9:16') { targetW = 1080; targetH = 1920; }
+    else if (aspectRatio === '1:1') { targetW = 1080; targetH = 1080; }
+    else if (aspectRatio === '4:3') { targetW = 1440; targetH = 1080; }
+    else if (aspectRatio === '3:4') { targetW = 1080; targetH = 1440; }
+    else { targetW = 1920; targetH = 1080; }
   } else {
     // 720p HD default
     if (aspectRatio === '9:16') { targetW = 720; targetH = 1280; }
@@ -1843,19 +1855,6 @@ export function getPreviewDimensions(aspectRatio: string = '16:9', resQuality?: 
     else if (aspectRatio === '4:3') { targetW = 960; targetH = 720; }
     else if (aspectRatio === '3:4') { targetW = 720; targetH = 960; }
     else { targetW = 1280; targetH = 720; }
-  }
-
-  try {
-    const exportDim = utils.getExportResolutionDimensions(
-      aspectRatio as any,
-      dom.videoExportResolutionSelect?.value || (state as any).exportResolution
-    );
-    if (exportDim && exportDim.width > 0 && exportDim.height > 0) {
-      targetW = Math.min(targetW, exportDim.width);
-      targetH = Math.min(targetH, exportDim.height);
-    }
-  } catch {
-    // fallback to computed preview dimensions
   }
 
   // Ensure even pixel dimensions
