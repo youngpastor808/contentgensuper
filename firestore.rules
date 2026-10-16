@@ -1,0 +1,387 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Global Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 256;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Check if the user is the primary workspace owner (bootstrapped super admin or holds 'owner' role)
+    function isAppOwner() {
+      return isSignedIn() && (
+        (request.auth.token.role != null && request.auth.token.role == 'owner') ||
+        (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
+        (request.auth.token.email != null &&
+         request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner')
+      );
+    }
+
+    // Check if the user is the bootstrapped super admin or holds the 'admin' or 'owner' role in users collection
+    function isAdmin() {
+      return isSignedIn() && (
+        isAppOwner() ||
+        (request.auth.token.role != null && request.auth.token.role in ['admin', 'owner']) ||
+        (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
+        (request.auth.token.email != null &&
+         request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'owner'])
+      );
+    }
+
+    // Check if the user is a reseller or admin
+    function isReseller() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (request.auth.token.role != null && request.auth.token.role in ['reseller', 'admin', 'owner']) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['reseller', 'admin', 'owner'])
+      );
+    }
+
+    // Validator for User entity
+    function isValidUser(data) {
+      return data is map &&
+        data.keys().hasOnly(['email', 'displayName', 'role', 'status', 'credits', 'renderMinutesQuota', 'renderMinutesUsed', 'assignedBy', 'maxApprovedUsers', 'approvedUsersCount', 'allowImageGeneration', 'allowAudioGeneration', 'allowVideoGeneration', 'allowCookieAuth', 'createdAt', 'updatedAt', 'createdBy', 'createdByAdmin', 'rejectedReason', 'apiKey']) &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('role' in data) || (data.role is string && data.role in ['user', 'reseller', 'admin', 'owner'])) &&
+        (!('status' in data) || (data.status is string && data.status in ['pending', 'approved', 'rejected', 'banned', 'restricted', 'active'])) &&
+        (!('credits' in data) || (data.credits is number)) &&
+        (!('renderMinutesQuota' in data) || (data.renderMinutesQuota is number && data.renderMinutesQuota >= 0)) &&
+        (!('renderMinutesUsed' in data) || (data.renderMinutesUsed is number && data.renderMinutesUsed >= 0)) &&
+        (!('assignedBy' in data) || data.assignedBy == null || (data.assignedBy is string && data.assignedBy.size() <= 128)) &&
+        (!('maxApprovedUsers' in data) || data.maxApprovedUsers == null || (data.maxApprovedUsers is number)) &&
+        (!('approvedUsersCount' in data) || data.approvedUsersCount == null || (data.approvedUsersCount is number)) &&
+        (!('allowImageGeneration' in data) || data.allowImageGeneration == null || data.allowImageGeneration is bool) &&
+        (!('allowAudioGeneration' in data) || data.allowAudioGeneration == null || data.allowAudioGeneration is bool) &&
+        (!('allowVideoGeneration' in data) || data.allowVideoGeneration == null || data.allowVideoGeneration is bool) &&
+        (!('allowCookieAuth' in data) || data.allowCookieAuth == null || data.allowCookieAuth is bool) &&
+        (!('createdBy' in data) || data.createdBy == null || (data.createdBy is string && data.createdBy.size() <= 128)) &&
+        (!('createdByAdmin' in data) || data.createdByAdmin == null || data.createdByAdmin is bool) &&
+        (!('rejectedReason' in data) || data.rejectedReason == null || (data.rejectedReason is string && data.rejectedReason.size() <= 128)) &&
+        (!('apiKey' in data) || data.apiKey == null || (data.apiKey is string && data.apiKey.size() <= 256));
+    }
+
+    // Validator for ApprovedEmail entity
+    function isValidApprovedEmail(data) {
+      return data is map &&
+        data.keys().hasOnly(['role', 'status', 'assignedBy', 'maxApprovedUsers', 'credits', 'createdAt', 'updatedAt']) &&
+        (!('role' in data) || (data.role is string && data.role in ['user', 'reseller'])) &&
+        (!('status' in data) || (data.status is string && data.status in ['pending', 'approved', 'rejected', 'banned', 'restricted', 'active'])) &&
+        (!('assignedBy' in data) || data.assignedBy == null || (data.assignedBy is string && data.assignedBy.size() <= 128)) &&
+        (!('maxApprovedUsers' in data) || data.maxApprovedUsers == null || (data.maxApprovedUsers is number)) &&
+        (!('credits' in data) || (data.credits is number)) &&
+        (!('createdAt' in data) || data.createdAt == null || data.createdAt is timestamp) &&
+        (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    // Validator for UserSettingsApiKeys entity
+    function isValidUserSettingsApiKeys(data) {
+      return data is map &&
+        (!('userGeminiApiKey' in data) || (data.userGeminiApiKey is string && data.userGeminiApiKey.size() <= 512)) &&
+        (!('geminiAuthMode' in data) || (data.geminiAuthMode is string && data.geminiAuthMode.size() <= 64)) &&
+        (!('geminiProvider' in data) || (data.geminiProvider is string && data.geminiProvider in ['aistudio', 'vertex'])) &&
+        (!('vertexAuthMode' in data) || (data.vertexAuthMode is string && data.vertexAuthMode in ['apiKey', 'adc'])) &&
+        (!('vertexProjectId' in data) || (data.vertexProjectId is string && data.vertexProjectId.size() <= 256)) &&
+        (!('vertexLocation' in data) || (data.vertexLocation is string && data.vertexLocation.size() <= 64)) &&
+        (!('geminiTextModel' in data) || (data.geminiTextModel is string && data.geminiTextModel.size() <= 256)) &&
+        (!('openaiGatewayBaseUrl' in data) || (data.openaiGatewayBaseUrl is string && data.openaiGatewayBaseUrl.size() <= 1024)) &&
+        (!('openaiGatewayApiKey' in data) || (data.openaiGatewayApiKey is string && data.openaiGatewayApiKey.size() <= 1024)) &&
+        (!('openaiGatewayModel' in data) || (data.openaiGatewayModel is string && data.openaiGatewayModel.size() <= 256)) &&
+        (!('openaiGatewayImageModel' in data) || (data.openaiGatewayImageModel is string && data.openaiGatewayImageModel.size() <= 256)) &&
+        (!('ai33ApiKey' in data) || (data.ai33ApiKey is string && data.ai33ApiKey.size() <= 512)) &&
+        (!('stabilityApiKey' in data) || (data.stabilityApiKey is string && data.stabilityApiKey.size() <= 512)) &&
+        (!('elevenlabsApiKey' in data) || (data.elevenlabsApiKey is string && data.elevenlabsApiKey.size() <= 512)) &&
+        (!('elevenlabsSelectedModel' in data) || (data.elevenlabsSelectedModel is string && data.elevenlabsSelectedModel.size() <= 256)) &&
+        (!('deepgramApiKey' in data) || (data.deepgramApiKey is string && data.deepgramApiKey.size() <= 512)) &&
+        (!('freesoundApiKey' in data) || (data.freesoundApiKey is string && data.freesoundApiKey.size() <= 512)) &&
+        (!('pexelsApiKey' in data) || (data.pexelsApiKey is string && data.pexelsApiKey.size() <= 512)) &&
+        (!('gradioTtsApiUrl' in data) || (data.gradioTtsApiUrl is string && data.gradioTtsApiUrl.size() <= 512));
+    }
+
+    // Validator for AdConfig entity
+    function isValidAdConfig(data) {
+      return data is map &&
+        (!('enabled' in data) || (data.enabled is bool)) &&
+        (!('type' in data) || (data.type is string && data.type in ['html', 'url', 'image'])) &&
+        (!('code' in data) || (data.code is string && data.code.size() <= 10000)) &&
+        (!('linkUrl' in data) || (data.linkUrl is string && data.linkUrl.size() <= 1000)) &&
+        (!('width' in data) || (data.width is number)) &&
+        (!('height' in data) || (data.height is number));
+    }
+
+    // Validator for SystemConfig entity
+    function isValidPrivateSystemConfig(data) {
+      return data is map &&
+        (!('systemGeminiApiKey' in data) || (data.systemGeminiApiKey is string && data.systemGeminiApiKey.size() <= 512)) &&
+        (!('systemGeminiAuthMode' in data) || (data.systemGeminiAuthMode is string && data.systemGeminiAuthMode in ['apiKey', 'webCookie', 'adc', 'openaiGateway'])) &&
+        (!('systemGeminiProvider' in data) || (data.systemGeminiProvider is string && data.systemGeminiProvider in ['aistudio', 'vertex'])) &&
+        (!('systemVertexAuthMode' in data) || (data.systemVertexAuthMode is string && data.systemVertexAuthMode in ['apiKey', 'adc'])) &&
+        (!('systemVertexProjectId' in data) || (data.systemVertexProjectId is string && data.systemVertexProjectId.size() <= 256)) &&
+        (!('systemVertexLocation' in data) || (data.systemVertexLocation is string && data.systemVertexLocation.size() <= 64)) &&
+        (!('systemOpenaiApiKey' in data) || (data.systemOpenaiApiKey is string && data.systemOpenaiApiKey.size() <= 512)) &&
+        (!('systemOpenaiBaseUrl' in data) || (data.systemOpenaiBaseUrl is string && data.systemOpenaiBaseUrl.size() <= 512)) &&
+        (!('systemOpenaiModel' in data) || (data.systemOpenaiModel is string && data.systemOpenaiModel.size() <= 256)) &&
+        (!('systemOpenaiImageModel' in data) || (data.systemOpenaiImageModel is string && data.systemOpenaiImageModel.size() <= 256)) &&
+        (!('systemGeminiPsid' in data) || (data.systemGeminiPsid is string && data.systemGeminiPsid.size() <= 4096)) &&
+        (!('systemGeminiPsidts' in data) || (data.systemGeminiPsidts is string && data.systemGeminiPsidts.size() <= 4096)) &&
+        (!('systemGeminiPsidcc' in data) || (data.systemGeminiPsidcc is string && data.systemGeminiPsidcc.size() <= 4096)) &&
+        (!('systemGeminiCompass' in data) || (data.systemGeminiCompass is string && data.systemGeminiCompass.size() <= 4096)) &&
+        (!('systemGeminiSid' in data) || (data.systemGeminiSid is string && data.systemGeminiSid.size() <= 4096)) &&
+        (!('systemGeminiHsid' in data) || (data.systemGeminiHsid is string && data.systemGeminiHsid.size() <= 4096)) &&
+        (!('systemGeminiSsid' in data) || (data.systemGeminiSsid is string && data.systemGeminiSsid.size() <= 4096)) &&
+        (!('systemElevenlabsApiKey' in data) || (data.systemElevenlabsApiKey is string && data.systemElevenlabsApiKey.size() <= 512)) &&
+        (!('systemDeepgramApiKey' in data) || (data.systemDeepgramApiKey is string && data.systemDeepgramApiKey.size() <= 512)) &&
+        (!('systemStabilityApiKey' in data) || (data.systemStabilityApiKey is string && data.systemStabilityApiKey.size() <= 512)) &&
+        (!('systemAi33ApiKey' in data) || (data.systemAi33ApiKey is string && data.systemAi33ApiKey.size() <= 512)) &&
+        (!('systemPexelsApiKey' in data) || (data.systemPexelsApiKey is string && data.systemPexelsApiKey.size() <= 512)) &&
+        (!('systemFreesoundApiKey' in data) || (data.systemFreesoundApiKey is string && data.systemFreesoundApiKey.size() <= 512)) &&
+        (!('systemGradioTtsUrl' in data) || (data.systemGradioTtsUrl is string && data.systemGradioTtsUrl.size() <= 512)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string)) &&
+        (!('updatedBy' in data) || (data.updatedBy is string));
+    }
+
+    function isValidPublicConfig(data) {
+      return data is map &&
+        (!('maintenanceMode' in data) || (data.maintenanceMode is bool)) &&
+        (!('maintenanceMessage' in data) || (data.maintenanceMessage is string && data.maintenanceMessage.size() <= 2000)) &&
+        (!('disableDesktopOfflineMode' in data) || (data.disableDesktopOfflineMode is bool)) &&
+        (!('disableSystemImageGeneration' in data) || (data.disableSystemImageGeneration is bool)) &&
+        (!('disableSystemVideoGeneration' in data) || (data.disableSystemVideoGeneration is bool)) &&
+        (!('disableSystemAudioGeneration' in data) || (data.disableSystemAudioGeneration is bool)) &&
+        (!('showAdsAdminButton' in data) || (data.showAdsAdminButton is bool)) &&
+        (!('desktopStudioPasswordHash' in data) || (data.desktopStudioPasswordHash is string && data.desktopStudioPasswordHash.size() <= 256)) &&
+        (!('creditCosts' in data) || (data.creditCosts is map)) &&
+        (!('requireAdminApproval' in data) || (data.requireAdminApproval is bool)) &&
+        (!('enforceGuestRestrictions' in data) || (data.enforceGuestRestrictions is bool)) &&
+        (!('guestExportPolicy' in data) || (data.guestExportPolicy is string && data.guestExportPolicy.size() <= 64)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 128)) &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 256));
+    }
+
+    // Validator for CreditLedger entity
+    function isValidCreditLedger(data) {
+      return data is map &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.amount is number &&
+        data.reason is string && data.reason.size() <= 200 &&
+        (!('balanceAfter' in data) || (data.balanceAfter is number && data.balanceAfter >= 0));
+    }
+
+    // Validator for DailyUsage entity
+    function isValidDailyUsage(data) {
+      return data is map &&
+        (!('spend' in data) || (data.spend is number && data.spend >= 0)) &&
+        (!('count' in data) || (data.count is number && data.count >= 0));
+    }
+
+    // --- Catch-All Default Deny ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (
+        isOwner(userId) ||
+        isAdmin() ||
+        isReseller() ||
+        (isSignedIn() && request.auth.token.email != null && resource != null && 'email' in resource.data && resource.data.email.toLowerCase() == request.auth.token.email.toLowerCase())
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        isReseller() ||
+        (request.auth.token.email != null && resource != null && 'email' in resource.data && resource.data.email.toLowerCase() == request.auth.token.email.toLowerCase())
+      );
+
+      allow create: if isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (
+          isOwner(userId) &&
+          (
+            // Verified bootstrapped super admin claim
+            (request.auth.token.role != null && request.auth.token.role in ['admin', 'owner']) ||
+            (request.auth.uid == 'RqynWxsBSTX7DUlheLVdckDXq3g2') ||
+            (request.auth.token.email != null &&
+             request.auth.token.email.toLowerCase() == 'bwaimatwaima@gmail.com') ||
+            // Standard User self-creation:
+            // Role must be 'user', status MUST be 'pending' (clients cannot self-approve),
+            // initial credits strictly 0 (no self-assigned credits),
+            // initial renderMinutesUsed strictly 0 (or omitted),
+            // renderMinutesQuota strictly default (<= 10), and no maxApprovedUsers elevation
+            (incoming().role == 'user' && 
+             incoming().status == 'pending' &&
+             (!('credits' in incoming()) || incoming().credits == 0) &&
+             (!('renderMinutesUsed' in incoming()) || incoming().renderMinutesUsed == 0) &&
+             (!('renderMinutesQuota' in incoming()) || incoming().renderMinutesQuota <= 10) &&
+             (!('maxApprovedUsers' in incoming()) || incoming().maxApprovedUsers == null))
+          )
+        ) ||
+        (isReseller() && incoming().role == 'user' && incoming().status == 'pending' && (!('credits' in incoming()) || incoming().credits == 0) && (!('maxApprovedUsers' in incoming()) || incoming().maxApprovedUsers == null))
+      );
+
+      allow update: if isValidId(userId) && isValidUser(incoming()) && (
+        (
+          isAdmin() && (
+            isAppOwner() || (
+              // Non-owner admins cannot modify an owner account or elevate anyone to owner
+              resource.data.get('role', 'user') != 'owner' &&
+              incoming().get('role', 'user') != 'owner'
+            )
+          )
+        )
+        || (
+          isOwner(userId)
+          && incoming().get('email', '') == resource.data.get('email', '') // pin email
+          && incoming().role == resource.data.role                         // immutable role
+          && incoming().status == resource.data.status                     // immutable status (clients cannot self-approve)
+          && incoming().credits == resource.data.credits                   // immutable credits (clients cannot change credit balance)
+          && (!('renderMinutesUsed' in incoming()) || incoming().renderMinutesUsed == resource.data.get('renderMinutesUsed', 0)) // immutable renderMinutesUsed (server-authoritative only)
+          && (incoming().get('renderMinutesQuota', null) == resource.data.get('renderMinutesQuota', null)) // immutable quota
+          && (incoming().get('maxApprovedUsers', null) == resource.data.get('maxApprovedUsers', null))
+          && (incoming().get('allowImageGeneration', false) == resource.data.get('allowImageGeneration', false))
+          && (incoming().get('allowAudioGeneration', false) == resource.data.get('allowAudioGeneration', false))
+          && (incoming().get('allowVideoGeneration', false) == resource.data.get('allowVideoGeneration', false))
+        )
+        || (
+          isReseller()
+          && incoming().role == 'user'
+          && resource.data.role == 'user'                                  // can't touch admins/resellers/owners
+          && incoming().status == resource.data.status                     // resellers cannot approve status
+          && (
+            resource.data.get('assignedBy', '') == request.auth.uid ||
+            (request.auth.token.email != null && resource.data.get('assignedBy', '') == request.auth.token.email.toLowerCase()) ||
+            ('createdBy' in resource.data && resource.data.createdBy == request.auth.uid)
+          )                                                                // only users THEY created or assigned
+          && incoming().credits == resource.data.credits                   // resellers can't change credits directly
+          && (!('renderMinutesUsed' in incoming()) || incoming().renderMinutesUsed == resource.data.get('renderMinutesUsed', 0)) // immutable renderMinutesUsed
+          && (incoming().get('maxApprovedUsers', null) == resource.data.get('maxApprovedUsers', null))
+        )
+      );
+
+      allow delete: if isValidId(userId) && (
+        // App owner can delete any duplicate or obsolete document (safeguarding only active session UID)
+        (isAppOwner() && userId != request.auth.uid) ||
+        // Admins can delete non-owner user documents
+        (isAdmin() && resource.data.get('role', 'user') != 'owner' && userId != request.auth.uid) ||
+        // Deduplication safeguard: authenticated user/admin can delete redundant duplicate documents matching their own email
+        (isSignedIn() && request.auth.token.email != null && resource != null && 'email' in resource.data && resource.data.email.toLowerCase() == request.auth.token.email.toLowerCase() && userId != request.auth.uid)
+      );
+
+      // --- User Subcollections (e.g. Settings, API Keys) ---
+      match /settings/{settingId} {
+        allow read, write: if isValidId(userId) && isValidId(settingId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // --- Credit Ledger (append-only ledger of credit spends/grants) ---
+    match /creditLedger/{ledgerId} {
+      allow get, list: if isSignedIn() && (isAdmin() || (resource.data != null && resource.data.uid == request.auth.uid));
+      allow create: if isSignedIn() && isValidCreditLedger(incoming()) && isAdmin();
+      allow update, delete: if false;
+    }
+
+    // --- Daily usage counters (per-user display-only analytics) ---
+    // NOTE: Records in /usage/{uid}/... are strictly display-only client analytics and are
+    // NEVER read or trusted for credits, render minutes, or quota enforcement.
+    // Quota enforcement and billing are managed server-side via Firestore Admin SDK on /users/{userId}.
+    match /usage/{uid}/{doc=**} {
+      allow get, list: if isSignedIn() && (isAdmin() || request.auth.uid == uid);
+      allow create: if isSignedIn() && isValidDailyUsage(incoming()) && (isAdmin() || request.auth.uid == uid);
+      allow update: if isSignedIn() && isValidDailyUsage(incoming()) && (
+        isAdmin() || (
+          request.auth.uid == uid &&
+          incoming().get('spend', 0) >= resource.data.get('spend', 0) &&
+          incoming().get('count', 0) >= resource.data.get('count', 0)
+        )
+      );
+      allow delete: if false;
+    }
+
+    // --- Approval markers for pre-provisioned accounts ---
+    match /approvedEmails/{emailId} {
+      allow get: if isValidId(emailId) && isSignedIn() && (isAdmin() || isReseller() || (request.auth.token.email != null && emailId == request.auth.token.email.toLowerCase()));
+      allow list: if isSignedIn() && (isAdmin() || isReseller());
+      allow create, update: if isValidId(emailId) && isValidApprovedEmail(incoming()) && (
+        isAdmin() ||
+        (isReseller() && incoming().get('role', 'user') == 'user' && !('maxApprovedUsers' in incoming()))
+      );
+      allow delete: if isValidId(emailId) && (
+        isAdmin() ||
+        isReseller() ||
+        (isSignedIn() && request.auth.token.email != null && emailId == request.auth.token.email.toLowerCase())
+      );
+    }
+
+    // --- Deleted users registry (prevents auto-sync resurrection) ---
+    match /deletedUsers/{emailId} {
+      allow get: if isValidId(emailId) && (isAdmin() || isReseller() || (isSignedIn() && request.auth.token.email != null && emailId == request.auth.token.email.toLowerCase()));
+      allow list: if isSignedIn() && (isAdmin() || isReseller());
+      allow create, update, delete: if isValidId(emailId) && (isAdmin() || isReseller());
+    }
+
+    // --- Academy Courses & Video Masterclasses ---
+    match /academy_courses/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(docId);
+    }
+
+    // --- Global Settings (Public Configuration, Ad Configuration, System Configuration) ---
+    match /settings/public_config {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidPublicConfig(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /settings/ad_config {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidAdConfig(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && (
+        settingId == 'ad_config' || settingId == 'public_config' || isAdmin()
+      );
+      allow list: if isAdmin();
+      allow create, update: if isValidId(settingId) && (
+        (settingId == 'ad_config' && isValidAdConfig(incoming())) ||
+        (settingId == 'system_config' && isValidPrivateSystemConfig(incoming())) ||
+        (settingId == 'public_config' && isValidPublicConfig(incoming()))
+      ) && isAdmin();
+      allow delete: if isValidId(settingId) && isAdmin();
+    }
+
+    // --- Health Check / Connection Test Probe ---
+    match /test/{docId} {
+      allow read: if isValidId(docId);
+      allow write: if false;
+    }
+  }
+}

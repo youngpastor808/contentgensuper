@@ -1,0 +1,61 @@
+{
+  "appId": "com.contentgen.ai",
+  "productName": "ContentGen AI",
+  "electronVersion": "43.7.1",
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
+  "directories": {
+    "output": "dist_electron"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json",
+    "node_modules/**/*",
+    "public/**/*",
+    "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+    "!node_modules/*/{test,__tests__,tests,example,examples}",
+    "!node_modules/*.d.ts",
+    "!node_modules/.bin",
+    "!**/*.map",
+    "!**/*.ts"
+  ],
+  "npmRebuild": false,
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "public/icon.ico"
+  },
+  "mac": {
+    "icon": "public/icon.png"
+  },
+  "linux": {
+    "icon": "public/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "asar": true,
+  "compression": "normal",
+  "buildVersion": "1.3.7",
+  "extraResources": [
+    {
+      "from": "resources",
+      "to": ".",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "asarUnpack": [
+    "dist/**",
+    "node_modules/**",
+    "electron/node_modules/ffmpeg-static/**"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "contentgen-remotion-renderer",
+  "version": "1.0.0",
+  "description": "Remotion AWS Lambda video rendering pipeline for ContentGen AI",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "preview": "remotion preview src/index.ts",
+    "bundle": "remotion bundle src/index.ts",
+    "render": "remotion render src/index.ts StoryboardVideo out.mp4",
+    "deploy:function": "remotion lambda functions deploy --architecture=arm64 --memory=2048 --timeout=900 --disk=10240",
+    "deploy:function:x86": "remotion lambda functions deploy --architecture=x86_64 --memory=3008 --timeout=900 --disk=10240",
+    "deploy:site": "remotion lambda sites create src/index.ts --site-name=storyboard-video",
+    "deploy:site:contentgen": "remotion lambda sites create src/index.ts --site-name=contentgen",
+    "deploy:cloudrun:service": "remotion cloudrun services deploy",
+    "deploy:cloudrun:site": "remotion cloudrun sites create src/index.ts --site-name=storyboard-video",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cloudrun": "4.0.527",
+    "@remotion/google-fonts": "4.0.527",
+    "@remotion/lambda": "4.0.527",
+    "@remotion/media": "4.0.527",
+    "mediabunny": "^1.55.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.527"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.527",
+    "@remotion/cli": "4.0.527",
+    "@remotion/renderer": "4.0.527",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix ContentGen AI Super V1.3.9",
+  "description": "ContentGen AI instantly transforms your stories into visually stunning, production-ready storyboards. With advanced cinematic pacing controls, consistent character generation, and a vast library of artistic styles, it\u0027s the ultimate pre-production tool for writers, filmmakers, and creators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

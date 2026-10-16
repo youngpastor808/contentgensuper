@@ -1,0 +1,22 @@
+{
+  "name": "contentgen-ai-electron",
+  "version": "1.3.7",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "electron ./main.cjs",
+    "build": "electron-builder --config electron-builder.json --projectDir .. --win",
+    "build:all": "electron-builder --config electron-builder.json --projectDir ..",
+    "build:win": "electron-builder --config electron-builder.json --projectDir .. --win",
+    "build:mac": "electron-builder --config electron-builder.json --projectDir .. --mac",
+    "build:linux": "electron-builder --config electron-builder.json --projectDir .. --linux"
+  },
+  "dependencies": {
+    "electron-context-menu": "^4.1.2",
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
+  }
+}

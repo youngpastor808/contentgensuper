@@ -1,0 +1,13 @@
+.env
+.env.*
+node_modules
+electron/node_modules
+remotion/node_modules
+functions/node_modules
+functions/lib
+*.log
+bun.lock
+bun.lockb
+.git
+.gitignore
+.gcloudignore

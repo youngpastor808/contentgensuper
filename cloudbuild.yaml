@@ -1,0 +1,45 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/app-repo/${_SERVICE_NAME}:latest', '.']
+
+  # Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/app-repo/${_SERVICE_NAME}:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/app-repo/${_SERVICE_NAME}:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '${_MEMORY}'
+      - '--cpu'
+      - '${_CPU}'
+      - '--timeout'
+      - '3600'
+      - '--port'
+      - '${_PORT}'
+      - '--concurrency'
+      - '16'
+      - '--max-instances'
+      - '1'
+      - '--clear-base-image-args'
+      - '--command'
+      - ''
+
+substitutions:
+  _REGION: 'europe-west1'
+  _SERVICE_NAME: 'contentgenhyper'
+  _PORT: '8080'
+  _MEMORY: '4Gi'
+  _CPU: '2'

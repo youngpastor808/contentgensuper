@@ -1,0 +1,14 @@
+.env
+.env.*
+node_modules
+electron/node_modules
+remotion/node_modules
+functions/node_modules
+functions/lib
+*.zip
+*.tar
+*.tar.gz
+!public/remotion-template.tar.gz
+*.log
+bun.lock
+bun.lockb

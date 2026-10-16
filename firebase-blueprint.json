@@ -1,0 +1,340 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role, credits, status, and assignment details.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "banned", "restricted", "active"]
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "reseller", "admin", "owner"]
+        },
+        "credits": {
+          "type": "number"
+        },
+        "renderMinutesQuota": {
+          "type": "number"
+        },
+        "renderMinutesUsed": {
+          "type": "number"
+        },
+        "assignedBy": {
+          "type": "string"
+        },
+        "maxApprovedUsers": {
+          "type": "number"
+        },
+        "rejectedReason": {
+          "type": "string"
+        },
+        "allowImageGeneration": {
+          "type": "boolean"
+        },
+        "allowAudioGeneration": {
+          "type": "boolean"
+        },
+        "allowVideoGeneration": {
+          "type": "boolean"
+        },
+        "allowCookieAuth": {
+          "type": "boolean"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["email", "status", "role"]
+    },
+    "UserSettingsApiKeys": {
+      "title": "UserSettingsApiKeys",
+      "description": "User API keys and private integrations settings.",
+      "type": "object",
+      "properties": {
+        "userGeminiApiKey": {
+          "type": "string"
+        },
+        "geminiAuthMode": {
+          "type": "string"
+        },
+        "geminiPsid": {
+          "type": "string"
+        },
+        "geminiPsidts": {
+          "type": "string"
+        },
+        "geminiPsidcc": {
+          "type": "string"
+        },
+        "geminiTextModel": {
+          "type": "string"
+        },
+        "openaiGatewayBaseUrl": {
+          "type": "string"
+        },
+        "openaiGatewayApiKey": {
+          "type": "string"
+        },
+        "openaiGatewayModel": {
+          "type": "string"
+        },
+        "ai33ApiKey": {
+          "type": "string"
+        },
+        "stabilityApiKey": {
+          "type": "string"
+        },
+        "elevenlabsApiKey": {
+          "type": "string"
+        },
+        "elevenlabsSelectedModel": {
+          "type": "string"
+        },
+        "deepgramApiKey": {
+          "type": "string"
+        },
+        "freesoundApiKey": {
+          "type": "string"
+        },
+        "pexelsApiKey": {
+          "type": "string"
+        },
+        "gradioTtsApiUrl": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "AdConfig": {
+      "title": "AdConfig",
+      "description": "Global ad banner configuration settings.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["html", "url", "image"]
+        },
+        "code": {
+          "type": "string"
+        },
+        "linkUrl": {
+          "type": "string"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "updatedBy": {
+          "type": "string"
+        }
+      }
+    },
+    "PublicConfig": {
+      "title": "PublicConfig",
+      "description": "Public system configuration readable by all users including maintenance mode and credit costs.",
+      "type": "object",
+      "properties": {
+        "maintenanceMode": { "type": "boolean" },
+        "maintenanceMessage": { "type": "string" },
+        "disableDesktopOfflineMode": { "type": "boolean" },
+        "disableSystemImageGeneration": { "type": "boolean" },
+        "disableSystemVideoGeneration": { "type": "boolean" },
+        "showAdsAdminButton": { "type": "boolean" },
+        "desktopStudioPasswordHash": { "type": "string" },
+        "requireAdminApproval": { "type": "boolean" },
+        "enforceGuestRestrictions": { "type": "boolean" },
+        "creditCosts": { "type": "object" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      }
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Global system configuration settings including API keys, credit costs, and maintenance mode.",
+      "type": "object",
+      "properties": {
+        "systemGeminiApiKey": { "type": "string" },
+        "systemGeminiAuthMode": { "type": "string" },
+        "systemOpenaiApiKey": { "type": "string" },
+        "systemOpenaiBaseUrl": { "type": "string" },
+        "systemOpenaiModel": { "type": "string" },
+        "systemOpenaiImageModel": { "type": "string" },
+        "systemGeminiPsid": { "type": "string" },
+        "systemGeminiPsidts": { "type": "string" },
+        "systemGeminiPsidcc": { "type": "string" },
+        "systemElevenlabsApiKey": { "type": "string" },
+        "systemDeepgramApiKey": { "type": "string" },
+        "systemStabilityApiKey": { "type": "string" },
+        "systemAi33ApiKey": { "type": "string" },
+        "systemPexelsApiKey": { "type": "string" },
+        "systemFreesoundApiKey": { "type": "string" },
+        "systemGradioTtsUrl": { "type": "string" },
+        "maintenanceMode": { "type": "boolean" },
+        "maintenanceMessage": { "type": "string" },
+        "disableDesktopOfflineMode": { "type": "boolean" },
+        "disableSystemImageGeneration": { "type": "boolean" },
+        "creditCosts": { "type": "object" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      }
+    },
+    "ApprovedEmail": {
+      "title": "ApprovedEmail",
+      "description": "Pre-provisioned user approval marker enabling invited or reseller-approved users to register.",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "reseller"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "banned", "restricted", "active"] },
+        "assignedBy": { "type": "string" },
+        "maxApprovedUsers": { "type": "number" },
+        "credits": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["role", "status"]
+    },
+    "CreditLedger": {
+      "title": "CreditLedger",
+      "description": "Audit record of credit deductions and grants.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "reason": { "type": "string" },
+        "at": { "type": "string" },
+        "balanceAfter": { "type": "number" }
+      },
+      "required": ["uid", "amount", "reason"]
+    },
+    "DailyUsage": {
+      "title": "DailyUsage",
+      "description": "Daily usage counters aggregated per user.",
+      "type": "object",
+      "properties": {
+        "spend": { "type": "number" },
+        "count": { "type": "number" }
+      }
+    },
+    "DeletedUser": {
+      "title": "DeletedUser",
+      "description": "Records intentionally deleted user accounts to prevent resurrection.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "deletedAt": { "type": "string" },
+        "deletedBy": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "TestProbe": {
+      "title": "TestProbe",
+      "description": "Connection probe document to verify Firestore reachability.",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string" }
+      }
+    },
+    "AcademyCurriculum": {
+      "title": "AcademyCurriculum",
+      "description": "Curriculum modules, video masterclasses, interactive studio presets, and lessons for ContentGen Academy.",
+      "type": "object",
+      "properties": {
+        "modules": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["modules"]
+    }
+  },
+  "firestore": {
+    "academy_courses/{docId}": {
+      "schema": {
+        "$ref": "#/entities/AcademyCurriculum"
+      },
+      "description": "Stores masterclass curriculum, modules, chapters, and video lessons."
+    },
+    "test/{docId}": {
+      "schema": {
+        "$ref": "#/entities/TestProbe"
+      },
+      "description": "Connection probe document for verifying Firestore network reachability."
+    },
+    "users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user account profiles, access roles, and credits."
+    },
+    "deletedUsers/{emailId}": {
+      "schema": {
+        "$ref": "#/entities/DeletedUser"
+      },
+      "description": "Stores permanently deleted user email markers to prevent auto-sync resurrection."
+    },
+    "users/{userId}/settings/{settingId}": {
+      "schema": {
+        "$ref": "#/entities/UserSettingsApiKeys"
+      },
+      "description": "Stores user API key configurations and private settings."
+    },
+    "approvedEmails/{emailId}": {
+      "schema": {
+        "$ref": "#/entities/ApprovedEmail"
+      },
+      "description": "Stores pre-provisioned approval markers for invited users by email."
+    },
+    "creditLedger/{ledgerId}": {
+      "schema": {
+        "$ref": "#/entities/CreditLedger"
+      },
+      "description": "Stores append-only credit ledger audit trail records."
+    },
+    "usage/{uid}/daily/{dayKey}": {
+      "schema": {
+        "$ref": "#/entities/DailyUsage"
+      },
+      "description": "Stores daily usage and spend aggregations per user."
+    },
+    "settings/{settingId}": {
+      "schema": {
+        "oneOf": [
+          { "$ref": "#/entities/AdConfig" },
+          { "$ref": "#/entities/SystemConfig" },
+          { "$ref": "#/entities/PublicConfig" }
+        ]
+      },
+      "description": "Stores application configuration documents such as ad banners, public configuration, and global system settings."
+    }
+  }
+}

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Radial Glow -->
+    <radialGradient id="bg-radial" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E1B4B" />
+      <stop offset="70%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#070A11" />
+    </radialGradient>
+
+    <!-- Glowing Outer Circular Ring -->
+    <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="35%" stop-color="#A855F7" />
+      <stop offset="70%" stop-color="#EC4899" />
+      <stop offset="100%" stop-color="#F43F5E" />
+    </linearGradient>
+
+    <!-- Core Orb Gradient -->
+    <linearGradient id="orb-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#DB2777" />
+    </linearGradient>
+
+    <!-- Play Symbol Gradient -->
+    <linearGradient id="play-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E0E7FF" />
+    </linearGradient>
+
+    <!-- Sparkle Gradients -->
+    <linearGradient id="sparkle-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+
+    <linearGradient id="sparkle-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#F43F5E" />
+    </linearGradient>
+
+    <!-- Outer Shadow Glow -->
+    <filter id="glow-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#7C3AED" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Dark Canvas Base -->
+  <rect width="512" height="512" rx="110" fill="url(#bg-radial)" />
+
+  <!-- Main Circular Emblem -->
+  <g transform="translate(256, 256)" filter="url(#glow-shadow)">
+    
+    <!-- Outer Neon Ring Halo -->
+    <circle cx="0" cy="0" r="190" fill="none" stroke="url(#ring-grad)" stroke-width="12" />
+
+    <!-- Inner Dark Glass Disc -->
+    <circle cx="0" cy="0" r="178" fill="#090D16" fill-opacity="0.95" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2" />
+
+    <!-- Concentric Waveform / Lens Aperture Radial Ticks -->
+    <g opacity="0.6">
+      <!-- 12 Concentric Orbit Ticks -->
+      <line x1="0" y1="-170" x2="0" y2="-156" stroke="#818CF8" stroke-width="4" stroke-linecap="round" />
+      <line x1="85" y1="-147" x2="78" y2="-135" stroke="#A855F7" stroke-width="4" stroke-linecap="round" />
+      <line x1="147" y1="-85" x2="135" y2="-78" stroke="#EC4899" stroke-width="4" stroke-linecap="round" />
+      <line x1="170" y1="0" x2="156" y2="0" stroke="#F43F5E" stroke-width="4" stroke-linecap="round" />
+      <line x1="147" y1="85" x2="135" y2="78" stroke="#EC4899" stroke-width="4" stroke-linecap="round" />
+      <line x1="85" y1="147" x2="78" y2="135" stroke="#A855F7" stroke-width="4" stroke-linecap="round" />
+      <line x1="0" y1="170" x2="0" y2="156" stroke="#818CF8" stroke-width="4" stroke-linecap="round" />
+      <line x1="-85" y1="147" x2="-78" y2="135" stroke="#6366F1" stroke-width="4" stroke-linecap="round" />
+      <line x1="-147" y1="85" x2="-135" y2="78" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" />
+      <line x1="-170" y1="0" x2="-156" y2="0" stroke="#818CF8" stroke-width="4" stroke-linecap="round" />
+      <line x1="-147" y1="-85" x2="-135" y2="-78" stroke="#A855F7" stroke-width="4" stroke-linecap="round" />
+      <line x1="-85" y1="-147" x2="-78" y2="-135" stroke="#EC4899" stroke-width="4" stroke-linecap="round" />
+    </g>
+
+    <!-- Inner Core Gradient Orb -->
+    <circle cx="0" cy="0" r="118" fill="url(#orb-grad)" />
+
+    <!-- Subtle Core Shimmer Glass Rim -->
+    <circle cx="0" cy="0" r="118" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="3" />
+
+    <!-- Center Play Icon with Soft Curved Corners -->
+    <path d="M -24 -46 C -24 -50 -18 -53 -14 -50 L 52 -10 C 56 -7 56 0 52 3 L -14 43 C -18 46 -24 43 -24 39 Z" fill="url(#play-grad)" />
+
+    <!-- AI Magic Sparkle 1 (Top Right) -->
+    <path d="M 125 -125 Q 125 -85 165 -85 Q 125 -85 125 -45 Q 125 -85 85 -85 Q 125 -85 125 -125 Z" fill="url(#sparkle-cyan)" />
+
+    <!-- AI Magic Sparkle 2 (Bottom Left) -->
+    <path d="M -120 110 Q -120 130 -100 130 Q -120 130 -120 150 Q -120 130 -140 130 Q -120 130 -120 110 Z" fill="url(#sparkle-amber)" />
+  </g>
+</svg>
